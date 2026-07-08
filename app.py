@@ -66,7 +66,7 @@ def get_stats():
     cursor.execute("SELECT sentiment, COUNT(*) FROM history GROUP BY sentiment")
     rows = cursor.fetchall()
     conn.close()
-    stats = {"POSITIVE": 0, "NEGATIVE": 0}
+    stats = {"POSITIVE": 0, "NEGATIVE": 0, "NEUTRAL": 0}
     for sentiment, count in rows:
         stats[sentiment] = count
     return stats
@@ -91,8 +91,20 @@ def analyze():
 
     try:
         result = sentiment_pipeline(text)[0]
-        sentiment = result["label"]  # POSITIVE or NEGATIVE
-        confidence = round(result["score"] * 100, 2)
+        raw_label = result["label"]  # POSITIVE or NEGATIVE (from model)
+        raw_score = result["score"]  # confidence for that raw label, 0-1
+
+        # The base model only outputs Positive/Negative. When it isn't
+        # confident either way, we treat the text as Neutral rather than
+        # forcing a strong label — this covers plain/factual statements
+        # (e.g. "my name is Vikas") that aren't really opinions.
+        NEUTRAL_THRESHOLD = 0.60
+        if raw_score < NEUTRAL_THRESHOLD:
+            sentiment = "NEUTRAL"
+            confidence = round(raw_score * 100, 2)
+        else:
+            sentiment = raw_label
+            confidence = round(raw_score * 100, 2)
 
         save_result(text, sentiment, confidence)
 

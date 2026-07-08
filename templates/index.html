@@ -96,6 +96,7 @@
     }
     .badge-positive { background: rgba(38, 166, 154, 0.2); color: #26a69a; border: 1px solid #26a69a; }
     .badge-negative { background: rgba(239, 83, 80, 0.2); color: #ef5350; border: 1px solid #ef5350; }
+    .badge-neutral { background: rgba(255, 202, 40, 0.2); color: #ffca28; border: 1px solid #ffca28; }
 
     .confidence-bar-wrap {
         background: #0e1117;
@@ -139,6 +140,7 @@
     .tag { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .tag-pos { background: rgba(38, 166, 154, 0.2); color: #26a69a; }
     .tag-neg { background: rgba(239, 83, 80, 0.2); color: #ef5350; }
+    .tag-neu { background: rgba(255, 202, 40, 0.2); color: #ffca28; }
 
     .empty-state { text-align: center; color: #6b7280; padding: 30px; font-size: 14px; }
 
@@ -190,6 +192,10 @@
         <div class="stat-box">
             <h3 id="posCount" style="color:#26a69a;">0</h3>
             <p>Positive</p>
+        </div>
+        <div class="stat-box">
+            <h3 id="neuCount" style="color:#ffca28;">0</h3>
+            <p>Neutral</p>
         </div>
         <div class="stat-box">
             <h3 id="negCount" style="color:#ef5350;">0</h3>
@@ -273,11 +279,20 @@ function showResult(data) {
     const text = document.getElementById('confidenceText');
 
     card.classList.add('show');
-    const isPositive = data.sentiment === 'POSITIVE';
-    badge.textContent = isPositive ? '😊 Positive' : '😟 Negative';
-    badge.className = 'sentiment-badge ' + (isPositive ? 'badge-positive' : 'badge-negative');
+
+    let emoji, label, badgeClass, barColor;
+    if (data.sentiment === 'POSITIVE') {
+        emoji = '😊'; label = 'Positive'; badgeClass = 'badge-positive'; barColor = '#26a69a';
+    } else if (data.sentiment === 'NEGATIVE') {
+        emoji = '😟'; label = 'Negative'; badgeClass = 'badge-negative'; barColor = '#ef5350';
+    } else {
+        emoji = '😐'; label = 'Neutral'; badgeClass = 'badge-neutral'; barColor = '#ffca28';
+    }
+
+    badge.textContent = `${emoji} ${label}`;
+    badge.className = 'sentiment-badge ' + badgeClass;
     bar.style.width = data.confidence + '%';
-    bar.style.background = isPositive ? '#26a69a' : '#ef5350';
+    bar.style.background = barColor;
     text.textContent = `Confidence: ${data.confidence}%`;
 }
 
@@ -285,9 +300,10 @@ async function loadHistory() {
     const res = await fetch('/history');
     const data = await res.json();
 
-    const total = data.stats.POSITIVE + data.stats.NEGATIVE;
+    const total = data.stats.POSITIVE + data.stats.NEGATIVE + (data.stats.NEUTRAL || 0);
     document.getElementById('totalCount').textContent = total;
     document.getElementById('posCount').textContent = data.stats.POSITIVE;
+    document.getElementById('neuCount').textContent = data.stats.NEUTRAL || 0;
     document.getElementById('negCount').textContent = data.stats.NEGATIVE;
 
     updateChart(data.stats);
@@ -300,10 +316,10 @@ function updateChart(stats) {
     chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Positive', 'Negative'],
+            labels: ['Positive', 'Neutral', 'Negative'],
             datasets: [{
-                data: [stats.POSITIVE, stats.NEGATIVE],
-                backgroundColor: ['#26a69a', '#ef5350'],
+                data: [stats.POSITIVE, stats.NEUTRAL || 0, stats.NEGATIVE],
+                backgroundColor: ['#26a69a', '#ffca28', '#ef5350'],
                 borderWidth: 0
             }]
         },
@@ -323,8 +339,10 @@ function renderHistoryTable(history) {
     }
     let html = '<table><thead><tr><th>Text</th><th>Sentiment</th><th>Confidence</th><th>Time</th></tr></thead><tbody>';
     history.forEach(item => {
-        const tagClass = item.sentiment === 'POSITIVE' ? 'tag-pos' : 'tag-neg';
-        const label = item.sentiment === 'POSITIVE' ? 'Positive' : 'Negative';
+        let tagClass, label;
+        if (item.sentiment === 'POSITIVE') { tagClass = 'tag-pos'; label = 'Positive'; }
+        else if (item.sentiment === 'NEGATIVE') { tagClass = 'tag-neg'; label = 'Negative'; }
+        else { tagClass = 'tag-neu'; label = 'Neutral'; }
         html += `<tr>
             <td class="text-cell">${escapeHtml(item.text)}</td>
             <td><span class="tag ${tagClass}">${label}</span></td>

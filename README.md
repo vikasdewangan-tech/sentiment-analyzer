@@ -8,7 +8,7 @@ Built as part of a Python Developer internship project assignment.
 
 ## 🚀 Features
 
-- 🤖 Sentiment analysis using a pretrained **DistilBERT** transformer model (no training required)
+- 🤖 Sentiment analysis using a pretrained **DistilBERT** transformer model — classifies text as **Positive, Negative, or Neutral** (Neutral is inferred when the model's confidence falls below a threshold, since the base model is binary)
 - 📊 Confidence score with animated visual bar
 - 📈 Live doughnut chart showing Positive vs Negative distribution
 - 📜 Analysis history stored in a local SQLite database
