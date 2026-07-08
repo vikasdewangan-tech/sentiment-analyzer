@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Sentiment Analyzer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+
+    body {
+        background: linear-gradient(135deg, #0e1117 0%, #161a23 100%);
+        color: #e8eaf0;
+        min-height: 100vh;
+        padding: 40px 20px;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 40px; }
+
+    header h1 {
+        font-size: 34px;
+        font-weight: 700;
+        background: linear-gradient(90deg, #00c9a7, #4a90e2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    header p { color: #9ba3af; margin-top: 8px; font-size: 15px; }
+
+    .card {
+        background: linear-gradient(135deg, #1c212c 0%, #161a23 100%);
+        border: 1px solid #2a2f3a;
+        border-radius: 16px;
+        padding: 28px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    textarea {
+        width: 100%;
+        min-height: 120px;
+        background: #0e1117;
+        border: 1px solid #2a2f3a;
+        border-radius: 10px;
+        padding: 14px;
+        color: #e8eaf0;
+        font-size: 15px;
+        resize: vertical;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: #00c9a7; }
+
+    .char-count { text-align: right; font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+    .analyze-btn {
+        margin-top: 16px;
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(90deg, #00c9a7, #00a389);
+        border: none;
+        border-radius: 10px;
+        color: #0e1117;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
+    }
+    .analyze-btn:hover { opacity: 0.9; }
+    .analyze-btn:active { transform: scale(0.98); }
+    .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error-msg {
+        background: rgba(239, 83, 80, 0.15);
+        border: 1px solid #ef5350;
+        color: #ff8a80;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-top: 14px;
+        font-size: 14px;
+        display: none;
+    }
+
+    .result-card { display: none; text-align: center; }
+    .result-card.show { display: block; }
+
+    .sentiment-badge {
+        display: inline-block;
+        padding: 10px 28px;
+        border-radius: 30px;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+    .badge-positive { background: rgba(38, 166, 154, 0.2); color: #26a69a; border: 1px solid #26a69a; }
+    .badge-negative { background: rgba(239, 83, 80, 0.2); color: #ef5350; border: 1px solid #ef5350; }
+
+    .confidence-bar-wrap {
+        background: #0e1117;
+        border-radius: 8px;
+        height: 10px;
+        margin: 16px auto;
+        max-width: 400px;
+        overflow: hidden;
+    }
+    .confidence-bar {
+        height: 100%;
+        border-radius: 8px;
+        transition: width 0.6s ease;
+    }
+    .confidence-text { font-size: 14px; color: #9ba3af; }
+
+    .stats-row { display: flex; gap: 16px; margin-bottom: 24px; }
+    .stat-box {
+        flex: 1;
+        text-align: center;
+        padding: 20px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #1c212c 0%, #161a23 100%);
+        border: 1px solid #2a2f3a;
+    }
+    .stat-box h3 { font-size: 28px; }
+    .stat-box p { color: #9ba3af; font-size: 13px; margin-top: 4px; }
+
+    .chart-wrap { max-width: 220px; margin: 0 auto; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid #2a2f3a;
+        font-size: 13px;
+    }
+    th { color: #9ba3af; font-weight: 600; }
+    td.text-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .tag { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .tag-pos { background: rgba(38, 166, 154, 0.2); color: #26a69a; }
+    .tag-neg { background: rgba(239, 83, 80, 0.2); color: #ef5350; }
+
+    .empty-state { text-align: center; color: #6b7280; padding: 30px; font-size: 14px; }
+
+    .loader {
+        display: none;
+        width: 20px; height: 20px;
+        border: 3px solid rgba(14,17,23,0.3);
+        border-top-color: #0e1117;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🧠 AI Sentiment Analyzer</h1>
+        <p>Analyze text sentiment instantly using a pretrained transformer model</p>
+    </header>
+
+    <div class="card">
+        <textarea id="textInput" maxlength="2000" placeholder="Type or paste a review, comment, or feedback here..."></textarea>
+        <div class="char-count"><span id="charCount">0</span> / 2000</div>
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyzeText()">
+            <span id="btnText">Analyze Sentiment</span>
+            <div class="loader" id="loader"></div>
+        </button>
+        <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div class="card result-card" id="resultCard">
+        <p style="color:#9ba3af; font-size:14px;">Result</p>
+        <div id="sentimentBadge" class="sentiment-badge">—</div>
+        <div class="confidence-bar-wrap">
+            <div class="confidence-bar" id="confidenceBar"></div>
+        </div>
+        <div class="confidence-text" id="confidenceText"></div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-box">
+            <h3 id="totalCount" style="color:#4a90e2;">0</h3>
+            <p>Total Analyzed</p>
+        </div>
+        <div class="stat-box">
+            <h3 id="posCount" style="color:#26a69a;">0</h3>
+            <p>Positive</p>
+        </div>
+        <div class="stat-box">
+            <h3 id="negCount" style="color:#ef5350;">0</h3>
+            <p>Negative</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="chart-wrap"><canvas id="sentimentChart"></canvas></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom:16px;">📜 Recent History</h3>
+        <div id="historyTableWrap">
+            <div class="empty-state">No analysis yet. Try analyzing some text above!</div>
+        </div>
+    </div>
+
+    <footer>Built with Flask + HuggingFace Transformers &middot; Model: distilbert-base-uncased-finetuned-sst-2-english</footer>
+</div>
+
+<script>
+let chart = null;
+
+const textInput = document.getElementById('textInput');
+const charCount = document.getElementById('charCount');
+textInput.addEventListener('input', () => {
+    charCount.textContent = textInput.value.length;
+});
+
+async function analyzeText() {
+    const text = textInput.value.trim();
+    const errorMsg = document.getElementById('errorMsg');
+    const btn = document.getElementById('analyzeBtn');
+    const btnText = document.getElementById('btnText');
+    const loader = document.getElementById('loader');
+
+    errorMsg.style.display = 'none';
+
+    if (!text) {
+        errorMsg.textContent = 'Please enter some text to analyze.';
+        errorMsg.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btnText.style.display = 'none';
+    loader.style.display = 'block';
+
+    try {
+        const res = await fetch('/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            errorMsg.textContent = data.error || 'Something went wrong.';
+            errorMsg.style.display = 'block';
+        } else {
+            showResult(data);
+            textInput.value = '';
+            charCount.textContent = '0';
+            loadHistory();
+        }
+    } catch (err) {
+        errorMsg.textContent = 'Could not reach the server. Is the Flask app running?';
+        errorMsg.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btnText.style.display = 'inline';
+        loader.style.display = 'none';
+    }
+}
+
+function showResult(data) {
+    const card = document.getElementById('resultCard');
+    const badge = document.getElementById('sentimentBadge');
+    const bar = document.getElementById('confidenceBar');
+    const text = document.getElementById('confidenceText');
+
+    card.classList.add('show');
+    const isPositive = data.sentiment === 'POSITIVE';
+    badge.textContent = isPositive ? '😊 Positive' : '😟 Negative';
+    badge.className = 'sentiment-badge ' + (isPositive ? 'badge-positive' : 'badge-negative');
+    bar.style.width = data.confidence + '%';
+    bar.style.background = isPositive ? '#26a69a' : '#ef5350';
+    text.textContent = `Confidence: ${data.confidence}%`;
+}
+
+async function loadHistory() {
+    const res = await fetch('/history');
+    const data = await res.json();
+
+    const total = data.stats.POSITIVE + data.stats.NEGATIVE;
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('posCount').textContent = data.stats.POSITIVE;
+    document.getElementById('negCount').textContent = data.stats.NEGATIVE;
+
+    updateChart(data.stats);
+    renderHistoryTable(data.history);
+}
+
+function updateChart(stats) {
+    const ctx = document.getElementById('sentimentChart').getContext('2d');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Positive', 'Negative'],
+            datasets: [{
+                data: [stats.POSITIVE, stats.NEGATIVE],
+                backgroundColor: ['#26a69a', '#ef5350'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { labels: { color: '#e8eaf0' } }
+            }
+        }
+    });
+}
+
+function renderHistoryTable(history) {
+    const wrap = document.getElementById('historyTableWrap');
+    if (!history.length) {
+        wrap.innerHTML = '<div class="empty-state">No analysis yet. Try analyzing some text above!</div>';
+        return;
+    }
+    let html = '<table><thead><tr><th>Text</th><th>Sentiment</th><th>Confidence</th><th>Time</th></tr></thead><tbody>';
+    history.forEach(item => {
+        const tagClass = item.sentiment === 'POSITIVE' ? 'tag-pos' : 'tag-neg';
+        const label = item.sentiment === 'POSITIVE' ? 'Positive' : 'Negative';
+        html += `<tr>
+            <td class="text-cell">${escapeHtml(item.text)}</td>
+            <td><span class="tag ${tagClass}">${label}</span></td>
+            <td>${item.confidence}%</td>
+            <td>${item.created_at}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Load history and empty chart on page load
+loadHistory();
+</script>
+</body>
+</html>
