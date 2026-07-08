@@ -86,6 +86,18 @@
     .result-card { display: none; text-align: center; }
     .result-card.show { display: block; }
 
+    .emotion-emoji {
+        font-size: 56px;
+        margin: 6px 0;
+        line-height: 1;
+    }
+    .emotion-label {
+        color: #9ba3af;
+        font-size: 13px;
+        text-transform: capitalize;
+        margin-bottom: 6px;
+    }
+
     .sentiment-badge {
         display: inline-block;
         padding: 10px 28px;
@@ -177,6 +189,8 @@
 
     <div class="card result-card" id="resultCard">
         <p style="color:#9ba3af; font-size:14px;">Result</p>
+        <div class="emotion-emoji" id="emotionEmoji">—</div>
+        <div class="emotion-label" id="emotionLabel"></div>
         <div id="sentimentBadge" class="sentiment-badge">—</div>
         <div class="confidence-bar-wrap">
             <div class="confidence-bar" id="confidenceBar"></div>
@@ -277,19 +291,24 @@ function showResult(data) {
     const badge = document.getElementById('sentimentBadge');
     const bar = document.getElementById('confidenceBar');
     const text = document.getElementById('confidenceText');
+    const emotionEmoji = document.getElementById('emotionEmoji');
+    const emotionLabel = document.getElementById('emotionLabel');
 
     card.classList.add('show');
 
-    let emoji, label, badgeClass, barColor;
+    emotionEmoji.textContent = data.emoji || '🙂';
+    emotionLabel.textContent = data.emotion || '';
+
+    let label, badgeClass, barColor;
     if (data.sentiment === 'POSITIVE') {
-        emoji = '😊'; label = 'Positive'; badgeClass = 'badge-positive'; barColor = '#26a69a';
+        label = 'Positive'; badgeClass = 'badge-positive'; barColor = '#26a69a';
     } else if (data.sentiment === 'NEGATIVE') {
-        emoji = '😟'; label = 'Negative'; badgeClass = 'badge-negative'; barColor = '#ef5350';
+        label = 'Negative'; badgeClass = 'badge-negative'; barColor = '#ef5350';
     } else {
-        emoji = '😐'; label = 'Neutral'; badgeClass = 'badge-neutral'; barColor = '#ffca28';
+        label = 'Neutral'; badgeClass = 'badge-neutral'; barColor = '#ffca28';
     }
 
-    badge.textContent = `${emoji} ${label}`;
+    badge.textContent = label;
     badge.className = 'sentiment-badge ' + badgeClass;
     bar.style.width = data.confidence + '%';
     bar.style.background = barColor;
@@ -337,13 +356,14 @@ function renderHistoryTable(history) {
         wrap.innerHTML = '<div class="empty-state">No analysis yet. Try analyzing some text above!</div>';
         return;
     }
-    let html = '<table><thead><tr><th>Text</th><th>Sentiment</th><th>Confidence</th><th>Time</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th></th><th>Text</th><th>Sentiment</th><th>Confidence</th><th>Time</th></tr></thead><tbody>';
     history.forEach(item => {
         let tagClass, label;
         if (item.sentiment === 'POSITIVE') { tagClass = 'tag-pos'; label = 'Positive'; }
         else if (item.sentiment === 'NEGATIVE') { tagClass = 'tag-neg'; label = 'Negative'; }
         else { tagClass = 'tag-neu'; label = 'Neutral'; }
         html += `<tr>
+            <td style="font-size:20px;">${item.emoji || '🙂'}</td>
             <td class="text-cell">${escapeHtml(item.text)}</td>
             <td><span class="tag ${tagClass}">${label}</span></td>
             <td>${item.confidence}%</td>

@@ -9,6 +9,7 @@ Built as part of a Python Developer internship project assignment.
 ## 🚀 Features
 
 - 🤖 Sentiment analysis using a pretrained **DistilBERT** transformer model — classifies text as **Positive, Negative, or Neutral** (Neutral is inferred when the model's confidence falls below a threshold, since the base model is binary)
+- 😄 **Emotion-based emoji** — a second model (`j-hartmann/emotion-english-distilroberta-base`) detects the specific emotion (joy, sadness, anger, fear, surprise, disgust, or neutral) and displays a matching emoji
 - 📊 Confidence score with animated visual bar
 - 📈 Live doughnut chart showing Positive vs Negative distribution
 - 📜 Analysis history stored in a local SQLite database
@@ -50,7 +51,7 @@ Built as part of a Python Developer internship project assignment.
 
 4. Open your browser at `http://127.0.0.1:5000`
 
-   > On first run, the model (~260MB) downloads automatically from HuggingFace — this only happens once and needs an internet connection.
+   > On first run, two models (~260MB + ~330MB) download automatically from HuggingFace — this only happens once and needs an internet connection.
 
 ## 📁 Project Structure
 
